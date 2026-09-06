@@ -115,8 +115,8 @@ class PrivateUSerApiTests(TestCase):
     """Test API requests that require authentication"""
 
     def setUp(self):
-        sef.user = create_user(
-            email="test@ecample.com",
+        self.user = create_user(
+            email="test@example.com",
             password="testpass123",
             name="Test Name",
         )
