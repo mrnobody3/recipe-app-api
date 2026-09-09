@@ -34,6 +34,11 @@ def create_recipe(user, **params):
     return recipe
 
 
+def create_user(**params):
+    """Create and return a sample user"""
+    return get_user_model().objects.create_user(**params)
+
+
 class PublicRecipeAPITests(TestCase):
     """Test the public recipe API endpoints."""
 
@@ -51,9 +56,7 @@ class PrivateRecipeAPITests(TestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.user = get_user_model().objects.create_user(
-            "user@example.com", "testpass"
-        )
+        self.user = create_user(email="user@example.com", password="testpass")
         self.client.force_authenticate(user=self.user)
 
     def test_retrieve_recipes(self):
@@ -70,8 +73,8 @@ class PrivateRecipeAPITests(TestCase):
 
     def test_recipe_list_limited_to_user(self):
         """Test that only recipes for the authenticated user are returned."""
-        other_user = get_user_model().objects.create_user(
-            "other@example.com", "testpass"
+        other_user = create_user(
+            email="other@example.com", password="testpass"
         )
         create_recipe(user=self.user)
         create_recipe(user=other_user)
@@ -106,4 +109,23 @@ class PrivateRecipeAPITests(TestCase):
         recipe = Recipe.objects.get(id=res.data["id"])
         for key, value in payload.items():
             self.assertEqual(getattr(recipe, key), value)
+        self.assertEqual(recipe.user, self.user)
+
+    def test_partial_update(self):
+        """Test partial update of a recipe."""
+        original_link = "https://example.com/recipe.pdf"
+        recipe = create_recipe(
+            user=self.user,
+            title="Sample recipe title",
+            link=original_link,
+        )
+
+        payload = {"title": "New recipe title"}
+        url = detail_url(recipe.id)
+        res = self.client.patch(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        recipe.refresh_from_db()
+        self.assertEqual(recipe.title, payload["title"])
+        self.assertEqual(recipe.link, original_link)
         self.assertEqual(recipe.user, self.user)
