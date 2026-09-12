@@ -31,8 +31,7 @@ class PublicIngredientsApiTests(TestCase):
         """Test auth is required for retrieving ingredients"""
         res = self.client.get(INGREDIENTS_URL)
 
-        # self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class PrivateIngredientsApiTest(TestCase):
@@ -41,7 +40,7 @@ class PrivateIngredientsApiTest(TestCase):
     def setUp(self) -> None:
         self.user = create_user()
         self.client = APIClient()
-        self.client.force_authentication(self.user)
+        self.client.force_authenticate(self.user)
 
     def test_retrieve_ingredients(self):
         """Test retrieving a list of ingredients"""
