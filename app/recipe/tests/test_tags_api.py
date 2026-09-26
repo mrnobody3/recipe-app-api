@@ -9,7 +9,7 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from core.models import Tag
+from core.models import Recipe, Tag
 
 from recipe.serializers import TagSerializer
 
@@ -57,6 +57,31 @@ class PrivateTagsApiTests(TestCase):
         serializer = TagSerializer(tags, many=True)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data, serializer.data)
+
+    def test_filter_tags_by_assigned_only(self):
+        """Test returning only tags assigned to a recipe."""
+        assigned_tag = Tag.objects.create(user=self.user, name="Vegan")
+        unassigned_tag = Tag.objects.create(user=self.user, name="Dessert")
+        recipe = Recipe.objects.create(
+            user=self.user,
+            title="Sample recipe",
+            time_minutes=10,
+            price=1,
+        )
+        recipe.tags.add(assigned_tag)
+        another_recipe = Recipe.objects.create(
+            user=self.user,
+            title="Another recipe",
+            time_minutes=15,
+            price=2,
+        )
+        another_recipe.tags.add(assigned_tag)
+
+        res = self.client.get(TAGS_URL, {"assigned_only": 1})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual([tag["id"] for tag in res.data], [assigned_tag.id])
+        self.assertNotIn(unassigned_tag.id, [tag["id"] for tag in res.data])
 
     def test_tags_limited_to_user(self):
         """Test that tags are limited to the authenticated user"""

@@ -9,7 +9,7 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from core.models import Ingredient
+from core.models import Ingredient, Recipe
 
 from recipe.serializers import IngredientSerializer
 
@@ -58,6 +58,41 @@ class PrivateIngredientsApiTest(TestCase):
         serializer = IngredientSerializer(ingredients, many=True)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data, serializer.data)
+
+    def test_filter_ingredients_by_assigned_only(self):
+        """Test returning only ingredients assigned to a recipe."""
+        assigned_ingredient = Ingredient.objects.create(
+            user=self.user, name="Tomato"
+        )
+        unassigned_ingredient = Ingredient.objects.create(
+            user=self.user, name="Pepper"
+        )
+        recipe = Recipe.objects.create(
+            user=self.user,
+            title="Sample recipe",
+            time_minutes=10,
+            price=1,
+        )
+        recipe.ingredients.add(assigned_ingredient)
+        another_recipe = Recipe.objects.create(
+            user=self.user,
+            title="Another recipe",
+            time_minutes=15,
+            price=2,
+        )
+        another_recipe.ingredients.add(assigned_ingredient)
+
+        res = self.client.get(INGREDIENTS_URL, {"assigned_only": 1})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [ingredient["id"] for ingredient in res.data],
+            [assigned_ingredient.id],
+        )
+        self.assertNotIn(
+            unassigned_ingredient.id,
+            [ingredient["id"] for ingredient in res.data],
+        )
 
     def test_ingredients_limited_to_user(self):
         """Test list of ingredients is limited to authentication user."""

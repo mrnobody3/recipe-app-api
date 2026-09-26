@@ -95,6 +95,56 @@ class PrivateRecipeAPITests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data, serializer.data)
 
+    def test_filter_recipes_by_tags(self):
+        """Test filtering recipes by one or more tag IDs."""
+        matching_tag = Tag.objects.create(user=self.user, name="Breakfast")
+        other_tag = Tag.objects.create(user=self.user, name="Lunch")
+        matching_recipe = create_recipe(user=self.user)
+        matching_recipe.tags.add(matching_tag, other_tag)
+        create_recipe(user=self.user)
+
+        res = self.client.get(
+            RECIPES_URL,
+            {"tags": f"{matching_tag.id},{other_tag.id}"},
+        )
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [recipe["id"] for recipe in res.data],
+            [
+                matching_recipe.id,
+            ],
+        )
+
+    def test_filter_recipes_by_ingredients(self):
+        """Test filtering recipes by one or more ingredient IDs."""
+        matching_ingredient = Ingredient.objects.create(
+            user=self.user, name="Tomato"
+        )
+        other_ingredient = Ingredient.objects.create(
+            user=self.user, name="Onion"
+        )
+        matching_recipe = create_recipe(user=self.user)
+        matching_recipe.ingredients.add(matching_ingredient, other_ingredient)
+        create_recipe(user=self.user)
+
+        res = self.client.get(
+            RECIPES_URL,
+            {
+                "ingredients": (
+                    f"{matching_ingredient.id},{other_ingredient.id}"
+                )
+            },
+        )
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [recipe["id"] for recipe in res.data],
+            [
+                matching_recipe.id,
+            ],
+        )
+
     def test_get_recipe_detail(self):
         """Test retrieving a recipe detail."""
         recipe = create_recipe(user=self.user)
